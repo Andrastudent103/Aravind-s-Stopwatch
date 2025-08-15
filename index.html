@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stopwatch</title>
+  <style>
+    /* Hide page scrollbars completely */
+    html, body {
+      width: 100%;
+      height: 100vh;
+      overflow: hidden;
+    }
+    ::-webkit-scrollbar { width: 0; height: 0; display: none; }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background-image: url('images/Background.jpeg');
+      background-position: center;
+      background-size: cover;
+
+      /* place the container at the right middle of the page */
+      display: flex;
+      align-items: center;       /* vertical center */
+      justify-content: flex-start;/* push content to the left */
+      padding-left: 2rem;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .container {
+      padding: 1rem;
+      max-width: 300px;
+      text-align: center;
+      border-radius: 10px;
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .time { padding: 1rem 0; font-size: 2rem; }
+    h1, p { color: #f8f8f8; }
+
+    button {
+      padding: 0.4rem 1rem;
+      margin: 0 0.2rem;
+      border-radius: 10px;
+      border: 1px solid #f8f8f8;
+      background: transparent;
+      color: #f8f8f8;
+    }
+    button:hover { background-color: rgba(0,0,0,0.4); }
+
+    /* Footer fixed to bottom center */
+    .site-footer {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      text-align: center;
+      pointer-events: none; /* doesn't block clicks */
+      font-size: 0.95rem;
+      color: #f8f8f8;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.6);
+    }
+    .site-footer span { pointer-events: auto; } /* if you need links clickable, remove pointer-events:none on parent */
+  </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Stopwatch</h1>
+      <p class="time">
+        <span id="minutes">00</span>:<span id="seconds">00</span>:<span id="tens">00</span>
+      </p>
+
+      <!-- Buttons with accessible aria-labels (keeps original ids used in script) -->
+      <button id="start" aria-label="Start stopwatch">Start</button>
+      <button id="stop" aria-label="Stop stopwatch">Stop</button>
+      <button id="reset" aria-label="Restart stopwatch">Reset</button>
+    </div>
+
+    <!-- aria-live region for screen readers -->
+    <div id="srLive" aria-live="polite" style="position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;"></div>
+
+    
+      <!-- Copyright bubble: copy-paste into your page -->
+<style>
+  .copyright-bubble {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.12));
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 28px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    font-size: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03);
+    backdrop-filter: blur(6px) saturate(120%);
+    -webkit-backdrop-filter: blur(6px) saturate(120%);
+    border: 1px solid rgba(255,255,255,0.06);
+    z-index: 9999;
+    cursor: default;
+    user-select: none;
+    transition: transform 160ms cubic-bezier(.2,.9,.2,1), box-shadow 160ms;
+  }
+
+  .copyright-bubble:hover {
+    transform: translateX(-50%) translateY(-4px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .copyright-icon {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+    display: inline-grid;
+    place-items: center;
+    background: rgba(255,255,255,0.06);
+    border-radius: 50%;
+    font-weight: 600;
+    font-size: 12px;
+  }
+
+  .copyright-text {
+    white-space: nowrap;
+  }
+
+  /* small screens: reduce size */
+  @media (max-width: 420px) {
+    .copyright-bubble { padding: 6px 10px; font-size: 13px; bottom: 12px; }
+    .copyright-icon { width: 18px; height: 18px; font-size: 11px; }
+  }
+</style>
+
+<div class="copyright-bubble" role="contentinfo" aria-label="Copyright notice">
+  <div class="copyright-icon" aria-hidden="true">©</div>
+  <div class="copyright-text"> Aravind Bontha ❤️ </div>
+</div>
+
+    
+
+  <script>
+    window.onload = function () {
+      let minutes = 0, seconds = 0, tens = 0;
+      const appendMinutes = document.querySelector('#minutes');
+      const appendTens = document.querySelector('#tens');
+      const appendSeconds = document.querySelector('#seconds');
+      const startBtn = document.querySelector('#start');
+      const stopBtn = document.querySelector('#stop');
+      const resetBtn = document.querySelector('#reset');
+      const srLive = document.querySelector('#srLive');
+      let Interval;
+
+      // Speak helper: update aria-live and optionally use SpeechSynthesis
+      function speak(text) {
+        // update aria-live for screen readers
+        srLive.textContent = text;
+
+        // optional synthesized voice for background audio if supported
+        if ('speechSynthesis' in window) {
+          try {
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = 'en-US';
+            utter.volume = 1;
+            utter.rate = 1;
+            utter.pitch = 1;
+            // cancel any previous queued utterances for clarity
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(utter);
+          } catch (e) {
+            // ignore speech errors silently
+          }
+        }
+      }
+
+      const startTimer = () => {
+        tens++;
+        appendTens.innerHTML = tens <= 9 ? '0' + tens : tens;
+        if (tens > 99) {
+          seconds++;
+          appendSeconds.innerHTML = seconds <= 9 ? '0' + seconds : seconds;
+          tens = 0;
+          appendTens.innerHTML = '00';
+        }
+        if (seconds > 59) {
+          minutes++;
+          appendMinutes.innerHTML = minutes <= 9 ? '0' + minutes : minutes;
+          seconds = 0;
+          appendSeconds.innerHTML = '00';
+        }
+      };
+
+      function formatElapsed() {
+        // Friendly format: omit zero units when appropriate
+        if (minutes > 0) {
+          return `Elapsed time: ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}, ${seconds} ${seconds === 1 ? 'second' : 'seconds'}`;
+        }
+        if (seconds > 0) {
+          return `Elapsed time: ${seconds} ${seconds === 1 ? 'second' : 'seconds'}`;
+        }
+        return `Elapsed time: ${tens} hundredths of a second`;
+      }
+
+      startBtn.onclick = () => {
+        clearInterval(Interval);
+        Interval = setInterval(startTimer, 10);
+        speak('Here it is started');
+      };
+      stopBtn.onclick = () => {
+        clearInterval(Interval);
+        speak('oops ! Stopwatch is stopped');
+      };
+      resetBtn.onclick = () => {
+        clearInterval(Interval);
+        tens = 0; seconds = 0; minutes = 0;
+        appendTens.innerHTML = '00';
+        appendSeconds.innerHTML = '00';
+        appendMinutes.innerHTML = '00';
+        speak(' Thank you !Stopwatch reset');
+      };
+
+      // Optional: announce elapsed time on double-click of stop (example) or expose a function
+      // Example: double-click stop to hear current elapsed time
+      stopBtn.ondblclick = () => {
+        speak(formatElapsed());
+      };
+    };
+  </script>
+  </body>
+</html>
